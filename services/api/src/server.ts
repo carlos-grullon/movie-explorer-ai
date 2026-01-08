@@ -8,6 +8,7 @@ import { errorMiddleware } from './middleware/errorMiddleware';
 import { requireAuth } from './middleware/requireAuth';
 import { favoritesRouter } from './routes/favoritesRouter';
 import { recommendationsRouter } from './routes/recommendationsRouter';
+import { tmdbRouter } from './routes/tmdbRouter';
 
 export async function createApp() {
   const app = express();
@@ -27,6 +28,7 @@ export async function createApp() {
 
   app.use('/docs', swaggerUi.serve, swaggerUi.setup(openApiSpec));
 
+  app.use('/tmdb', tmdbRouter);
   app.use('/favorites', requireAuth(), favoritesRouter);
   app.use('/recommendations', requireAuth(), recommendationsRouter);
 
