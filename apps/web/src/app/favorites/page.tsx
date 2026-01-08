@@ -25,7 +25,11 @@ export default async function FavoritesPage() {
               Browse
             </Link>
             <ThemeToggle />
-            <AuthButtons isAuthed={Boolean(user)} />
+            <AuthButtons
+              isAuthed={Boolean(user)}
+              displayName={user?.name || user?.nickname || user?.email}
+              pictureUrl={user?.picture}
+            />
           </div>
         </div>
       </header>
