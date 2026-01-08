@@ -1,0 +1,27 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Favorite {
+  id            String   @id @default(uuid())
+  userId        String
+  tmdbMovieId   Int
+
+  title         String
+  releaseDate   String?
+  posterPath    String?
+
+  customTitle   String?
+  personalNotes String?
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([userId, tmdbMovieId])
+  @@index([userId])
+}
