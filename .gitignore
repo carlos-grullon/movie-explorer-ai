@@ -41,6 +41,8 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+PROJECT_GOALS.md
+
 services/logs/*.log
 .logs/
 
