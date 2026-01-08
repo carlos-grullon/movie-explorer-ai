@@ -81,5 +81,47 @@ Security notes:
 - Do not commit logs. They may include user-facing content (movie overview + model output).
 - The app does not log API keys or JWTs.
 
+## Software Development Patterns (Required)
+
+This project intentionally uses a small set of common patterns to keep the codebase understandable, testable, and easy to extend.
+
+Monorepo (npm workspaces):
+- `apps/web` is the Next.js UI.
+- `services/api` is the Express API.
+- A root `package.json` orchestrates common workflows (`npm run dev`, `npm run dev:web`, `npm run dev:api`).
+
+Why: a single repo makes it easy to keep API + Web changes in sync (especially for auth and recommendation contracts).
+
+BFF / API Gateway (Next.js route handlers):
+- The web app exposes server-side routes under `apps/web/src/app/api/*`.
+- These routes forward requests to the backend API and attach Auth0 access tokens.
+
+Why: keeps browser code simple (no token handling in the client) and centralizes auth/session concerns in one place.
+
+Layered backend structure (Router → Service → Clients/Repositories):
+- `routes/*` define HTTP endpoints and validation.
+- `services/*` implement core business logic (favorites + recommendations).
+- `tmdb/*` and `openai/*` are external API clients.
+- `repositories/*` encapsulate database access (Prisma).
+
+Why: separation of concerns; each layer is easier to test and replace.
+
+Authentication as middleware (Auth0 JWT validation):
+- Backend uses a dedicated auth middleware (`requireAuth`) to protect routes.
+- Web uses Auth0 session handling to obtain an access token and call the backend.
+
+Why: consistent enforcement at the edge of the API, while keeping route logic focused on business behavior.
+
+Resilience via fallback strategy (OpenAI → TMDb):
+- Recommendations prefer OpenAI when configured.
+- If OpenAI is missing/invalid or returns an auth error, the API falls back to TMDb similar movies.
+
+Why: keeps the app functional even when the AI provider is unavailable.
+
+Feature monitoring via env-toggled file logs:
+- OpenAI prompt/response logging is file-based and controlled by env vars.
+
+Why: enables debugging/verification of AI behavior without changing runtime code paths for all environments.
+
 ## Notes
 - The web dev server runs with `next dev --webpack` for stability in this monorepo setup.
