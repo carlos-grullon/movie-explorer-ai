@@ -22,6 +22,19 @@ export type TmdbMovieDetails = {
   genres?: Array<{ id: number; name: string }>;
 };
 
+export type Favorite = {
+  id: string;
+  userId: string;
+  tmdbMovieId: number;
+  title: string;
+  releaseDate?: string | null;
+  posterPath?: string | null;
+  customTitle?: string | null;
+  personalNotes?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
 const DEFAULT_API_BASE_URL = 'http://192.168.100.8:4000';
 
 export function getApiBaseUrl(): string {
@@ -46,7 +59,25 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
     throw new Error(text || `Request failed: ${res.status}`);
   }
 
-  return (await res.json()) as T;
+  if (res.status === 204) {
+    return undefined as T;
+  }
+
+  const text = await res.text().catch(() => '');
+  if (!text) {
+    return undefined as T;
+  }
+  return JSON.parse(text) as T;
+}
+
+async function apiFetchAuthed<T>(path: string, accessToken: string, init?: RequestInit): Promise<T> {
+  return apiFetch<T>(path, {
+    ...init,
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      ...(init?.headers || {}),
+    },
+  });
 }
 
 export function tmdbTrending(page = 1) {
@@ -61,6 +92,34 @@ export function tmdbSearch(query: string, page = 1) {
 
 export function tmdbMovieDetails(movieId: number) {
   return apiFetch<TmdbMovieDetails>(`/tmdb/movie/${movieId}`);
+}
+
+export async function favoritesList(accessToken: string): Promise<Favorite[]> {
+  const res = await apiFetchAuthed<{ favorites: Favorite[] }>(`/favorites`, accessToken);
+  return res.favorites;
+}
+
+export async function favoritesAdd(
+  accessToken: string,
+  input: {
+    tmdbMovieId: number;
+    title: string;
+    releaseDate?: string;
+    posterPath?: string;
+  }
+): Promise<Favorite> {
+  const res = await apiFetchAuthed<{ favorite: Favorite }>(`/favorites`, accessToken, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(input),
+  });
+  return res.favorite;
+}
+
+export async function favoritesRemove(accessToken: string, id: string): Promise<void> {
+  await apiFetchAuthed<void>(`/favorites/${encodeURIComponent(id)}`, accessToken, { method: 'DELETE' });
 }
 
 export function tmdbPosterUrl(posterPath: string | null | undefined, width: 500 | 780 = 500): string | null {

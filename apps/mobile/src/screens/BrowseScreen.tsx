@@ -144,7 +144,7 @@ export function BrowseScreen({ navigation }: Props) {
             onPress={() => setQuery('')}
             style={({ pressed }) => [styles.clearButton, pressed && { opacity: 0.8 }]}
           >
-            <Text style={styles.clearButtonText}>Clear</Text>
+            <Text style={styles.clearButtonText}>×</Text>
           </Pressable>
         ) : null}
       </View>
@@ -266,6 +266,7 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
+    minWidth: 0,
     height: 42,
     borderRadius: 12,
     paddingHorizontal: 12,
@@ -276,18 +277,20 @@ const styles = StyleSheet.create({
   },
   clearButton: {
     height: 42,
-    paddingHorizontal: 12,
+    width: 42,
     borderRadius: 12,
     backgroundColor: 'rgba(255,255,255,0.08)',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.10)',
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
   clearButtonText: {
     color: 'white',
     fontWeight: '700',
-    fontSize: 12,
+    fontSize: 18,
+    lineHeight: 18,
   },
   listContent: {
     padding: 16,

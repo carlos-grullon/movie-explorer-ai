@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Image,
   Pressable,
   ScrollView,
@@ -11,7 +12,16 @@ import {
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import type { RootStackParamList } from '../navigation/types';
-import { tmdbMovieDetails, tmdbPosterUrl, type TmdbMovieDetails } from '../api/client';
+import {
+  favoritesAdd,
+  favoritesList,
+  favoritesRemove,
+  tmdbMovieDetails,
+  tmdbPosterUrl,
+  type Favorite,
+  type TmdbMovieDetails,
+} from '../api/client';
+import { useAuth } from '../auth/AuthProvider';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'MovieDetails'>;
 
@@ -23,6 +33,9 @@ type State =
 export function MovieDetailsScreen({ route, navigation }: Props) {
   const { movieId } = route.params;
   const [state, setState] = useState<State>({ kind: 'loading' });
+  const { status, accessToken, login } = useAuth();
+  const [favorite, setFavorite] = useState<Favorite | null>(null);
+  const [favBusy, setFavBusy] = useState(false);
 
   async function load() {
     try {
@@ -37,6 +50,55 @@ export function MovieDetailsScreen({ route, navigation }: Props) {
   useEffect(() => {
     load();
   }, [movieId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (status !== 'signed_in' || !accessToken) {
+        setFavorite(null);
+        return;
+      }
+      try {
+        const items = await favoritesList(accessToken);
+        if (cancelled) return;
+        const hit = items.find((f) => f.tmdbMovieId === movieId) ?? null;
+        setFavorite(hit);
+      } catch {
+        if (!cancelled) setFavorite(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [status, accessToken, movieId]);
+
+  async function onToggleFavorite(movie: TmdbMovieDetails) {
+    if (favBusy) return;
+    setFavBusy(true);
+    try {
+      if (status !== 'signed_in' || !accessToken) {
+        await login();
+        return;
+      }
+
+      if (favorite) {
+        await favoritesRemove(accessToken, favorite.id);
+        setFavorite(null);
+      } else {
+        const created = await favoritesAdd(accessToken, {
+          tmdbMovieId: movie.id,
+          title: movie.title,
+          releaseDate: movie.release_date,
+          posterPath: movie.poster_path,
+        });
+        setFavorite(created);
+      }
+    } catch (e: any) {
+      Alert.alert('Favorites', e?.message ?? 'Failed to update favorites');
+    } finally {
+      setFavBusy(false);
+    }
+  }
 
   if (state.kind === 'loading') {
     return (
@@ -77,6 +139,16 @@ export function MovieDetailsScreen({ route, navigation }: Props) {
 
       <Text style={styles.sectionTitle}>Overview</Text>
       <Text style={styles.overview}>{movie.overview || 'No overview.'}</Text>
+
+      <View style={{ height: 16 }} />
+
+      <Pressable
+        onPress={() => onToggleFavorite(movie)}
+        style={({ pressed }) => [styles.favBtn, pressed && { opacity: 0.85 }, favBusy && { opacity: 0.6 }]}
+        disabled={favBusy}
+      >
+        <Text style={styles.favTxt}>{favorite ? 'Remove from favorites' : 'Add to favorites'}</Text>
+      </Pressable>
 
       <View style={{ height: 24 }} />
     </ScrollView>
@@ -163,5 +235,18 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.78)',
     fontSize: 14,
     lineHeight: 20,
+  },
+  favBtn: {
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.14)',
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  favTxt: {
+    color: 'white',
+    fontWeight: '800',
   },
 });
