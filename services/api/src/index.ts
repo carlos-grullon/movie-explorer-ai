@@ -1,10 +1,15 @@
-import dotenv from 'dotenv';
-
-dotenv.config();
-
 import { createApp } from './server';
 
 const port = process.env.PORT ? Number(process.env.PORT) : 4000;
+
+if (process.env.NODE_ENV !== 'production') {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    require('dotenv').config();
+  } catch {
+    // ignore
+  }
+}
 
 async function main() {
   const app = await createApp();
