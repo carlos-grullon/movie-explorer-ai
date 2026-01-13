@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 
-import { tmdbDiscoverMovies } from '@/lib/tmdb';
+import { proxyGetToApi } from '../../_utils/backendProxy';
 
 const QuerySchema = z.object({
   page: z.coerce.number().int().positive().optional(),
@@ -35,12 +35,12 @@ export async function GET(req: Request) {
   }
 
   try {
-    const data = await tmdbDiscoverMovies({
-      page: parsed.page ?? 1,
-      year: parsed.year,
-      genreIds: parsed.genres,
-    });
-    return NextResponse.json(data);
+    const params = new URLSearchParams();
+    params.set('page', String(parsed.page ?? 1));
+    if (parsed.year) params.set('year', String(parsed.year));
+    if (parsed.genres?.length) params.set('genres', parsed.genres.join(','));
+
+    return await proxyGetToApi(`/tmdb/discover?${params.toString()}`);
   } catch (e: any) {
     return NextResponse.json({ message: e?.message ?? 'TMDb error' }, { status: 502 });
   }

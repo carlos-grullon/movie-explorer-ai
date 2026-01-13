@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-import { tmdbGetMovieDetails } from '@/lib/tmdb';
+import { proxyGetToApi } from '../../../_utils/backendProxy';
 
 export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
@@ -11,8 +11,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
   }
 
   try {
-    const data = await tmdbGetMovieDetails(movieId);
-    return NextResponse.json(data);
+    return await proxyGetToApi(`/tmdb/movie/${encodeURIComponent(String(movieId))}`);
   } catch (e: any) {
     return NextResponse.json({ message: e?.message ?? 'TMDb error' }, { status: 502 });
   }
