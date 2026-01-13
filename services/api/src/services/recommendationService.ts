@@ -18,12 +18,42 @@ const RecommendationsSchema = z.object({
 
 export type Recommendation = z.infer<typeof RecommendationItemSchema> & {
   tmdbMovieId: number | null;
+  posterPath?: string | null;
 };
 
 export type RecommendationsResult = {
   recommendations: Recommendation[];
   source: 'openai' | 'tmdb';
 };
+
+type CacheEntry = {
+  expiresAt: number;
+  value: RecommendationsResult;
+};
+
+const cache = new Map<number, CacheEntry>();
+
+function cacheTtlMs(): number {
+  const v = Number(process.env.RECOMMENDATIONS_CACHE_TTL_SECONDS || 6 * 60 * 60);
+  if (!Number.isFinite(v) || v <= 0) return 0;
+  return v * 1000;
+}
+
+function cacheGet(movieId: number): RecommendationsResult | null {
+  const entry = cache.get(movieId);
+  if (!entry) return null;
+  if (Date.now() >= entry.expiresAt) {
+    cache.delete(movieId);
+    return null;
+  }
+  return entry.value;
+}
+
+function cacheSet(movieId: number, value: RecommendationsResult) {
+  const ttl = cacheTtlMs();
+  if (!ttl) return;
+  cache.set(movieId, { expiresAt: Date.now() + ttl, value });
+}
 
 function envFlag(name: string): boolean {
   const v = process.env[name];
@@ -82,6 +112,9 @@ function logOpenAiExchange(entry: {
 
 export class RecommendationService {
   async getRecommendations(movieId: number): Promise<RecommendationsResult> {
+    const cached = cacheGet(movieId);
+    if (cached) return cached;
+
     const tmdb = new TmdbClient();
     let openai: ReturnType<typeof createOpenAiClient> | null = null;
     try {
@@ -106,7 +139,7 @@ export class RecommendationService {
 
     if (!openai) {
       const similar = await tmdb.getSimilarMovies(movieId);
-      return {
+      const result: RecommendationsResult = {
         source: 'tmdb',
         recommendations: similar
           .slice(0, 5)
@@ -115,8 +148,12 @@ export class RecommendationService {
             year: m.release_date?.slice(0, 4),
             reason: 'Similar on TMDb.',
             tmdbMovieId: m.id,
+            posterPath: (m as any)?.poster_path ?? null,
           })),
       };
+
+      cacheSet(movieId, result);
+      return result;
     }
 
     const model = process.env.OPENAI_MODEL || 'gpt-4o-mini';
@@ -167,10 +204,18 @@ export class RecommendationService {
     const resolved: Recommendation[] = await Promise.all(
       valid.recommendations.map(async (r) => {
         const tmdbMovieId = await tmdb.searchMovieIdByTitle(r.title, r.year);
-        return { ...r, tmdbMovieId };
+        if (!tmdbMovieId) return { ...r, tmdbMovieId: null, posterPath: null };
+        try {
+          const m = await tmdb.getMovieDetails(tmdbMovieId);
+          return { ...r, tmdbMovieId, posterPath: (m as any)?.poster_path ?? null };
+        } catch {
+          return { ...r, tmdbMovieId, posterPath: null };
+        }
       })
     );
 
-    return { source: 'openai', recommendations: resolved.slice(0, 5) };
+    const result: RecommendationsResult = { source: 'openai', recommendations: resolved.slice(0, 5) };
+    cacheSet(movieId, result);
+    return result;
   }
 }

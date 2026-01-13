@@ -16,12 +16,15 @@ import {
   favoritesAdd,
   favoritesList,
   favoritesRemove,
+  recommendationsGet,
   tmdbMovieDetails,
   tmdbPosterUrl,
   type Favorite,
+  type Recommendation,
   type TmdbMovieDetails,
 } from '../api/client';
 import { useAuth } from '../auth/AuthProvider';
+import { loadTokens } from '../auth/tokenStore';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'MovieDetails'>;
 
@@ -37,6 +40,11 @@ export function MovieDetailsScreen({ route, navigation }: Props) {
   const [favorite, setFavorite] = useState<Favorite | null>(null);
   const [favBusy, setFavBusy] = useState(false);
 
+  const [recsLoading, setRecsLoading] = useState(false);
+  const [recsError, setRecsError] = useState<string | null>(null);
+  const [recsSource, setRecsSource] = useState<'openai' | 'tmdb' | null>(null);
+  const [recs, setRecs] = useState<Recommendation[]>([]);
+
   async function load() {
     try {
       const movie = await tmdbMovieDetails(movieId);
@@ -50,6 +58,40 @@ export function MovieDetailsScreen({ route, navigation }: Props) {
   useEffect(() => {
     load();
   }, [movieId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setRecsLoading(true);
+      setRecsError(null);
+      setRecsSource(null);
+      setRecs([]);
+      try {
+        if (status !== 'signed_in') {
+          if (!cancelled) {
+            setRecsLoading(false);
+            setRecsError('Login required to view recommendations.');
+          }
+          return;
+        }
+        const token = accessToken || (await loadTokens()).accessToken;
+        if (!token) throw new Error('Login required to view recommendations.');
+
+        const json = await recommendationsGet(token, movieId);
+        const items = Array.isArray(json?.recommendations) ? json.recommendations.slice(0, 5) : [];
+        if (cancelled) return;
+        setRecs(items);
+        setRecsSource(json?.source ?? null);
+      } catch (e: any) {
+        if (!cancelled) setRecsError(e?.message ?? 'Failed to load recommendations');
+      } finally {
+        if (!cancelled) setRecsLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [movieId, status, accessToken]);
 
   useEffect(() => {
     let cancelled = false;
@@ -150,6 +192,67 @@ export function MovieDetailsScreen({ route, navigation }: Props) {
         <Text style={styles.favTxt}>{favorite ? 'Remove from favorites' : 'Add to favorites'}</Text>
       </Pressable>
 
+      <View style={{ height: 22 }} />
+
+      <View style={styles.recsHeader}>
+        <Text style={styles.recsTitle}>Recommendations</Text>
+        {recsSource ? (
+          <Text style={styles.recsBadge}>{recsSource === 'openai' ? 'AI' : 'TMDb fallback'}</Text>
+        ) : null}
+      </View>
+      <Text style={styles.recsSub}>Up to 5 similar movies.</Text>
+
+      <View style={{ height: 12 }} />
+
+      {recsLoading ? <Text style={styles.recsMuted}>Loading…</Text> : null}
+      {!recsLoading && recsError ? (
+        <Pressable
+          onPress={async () => {
+            try {
+              await login();
+            } catch (e: any) {
+              Alert.alert('Auth', e?.message ?? 'Login failed');
+            }
+          }}
+          disabled={status === 'signed_in'}
+        >
+          <Text style={styles.recsError}>{recsError}</Text>
+        </Pressable>
+      ) : null}
+      {!recsLoading && !recsError && recs.length === 0 ? (
+        <Text style={styles.recsMuted}>No recommendations yet.</Text>
+      ) : null}
+
+      {recs.map((r, idx) => {
+        const titleText = `${r.title}${r.year ? ` (${r.year})` : ''}`;
+        const disabled = !r.tmdbMovieId;
+        const poster = tmdbPosterUrl(r.posterPath ?? null, 500);
+        return (
+          <Pressable
+            key={`${r.tmdbMovieId ?? r.title}-${idx}`}
+            disabled={disabled}
+            onPress={() => {
+              if (!r.tmdbMovieId) return;
+              navigation.push('MovieDetails', { movieId: r.tmdbMovieId });
+            }}
+            style={({ pressed }) => [styles.recsCard, pressed && !disabled && { opacity: 0.85 }, disabled && { opacity: 0.6 }]}
+          >
+            {poster ? <Image source={{ uri: poster }} style={styles.recsPoster} /> : <View style={styles.recsPosterFallback} />}
+            <View style={styles.recsBody}>
+              <Text style={styles.recsCardTitle} numberOfLines={2}>
+                {titleText}
+              </Text>
+              {r.reason ? (
+                <Text style={styles.recsReason} numberOfLines={3}>
+                  {r.reason}
+                </Text>
+              ) : null}
+              {disabled ? <Text style={styles.recsSmallMuted}>No TMDb match</Text> : null}
+            </View>
+          </Pressable>
+        );
+      })}
+
       <View style={{ height: 24 }} />
     </ScrollView>
   );
@@ -248,5 +351,84 @@ const styles = StyleSheet.create({
   favTxt: {
     color: 'white',
     fontWeight: '800',
+  },
+  recsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  recsTitle: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  recsSub: {
+    marginTop: 4,
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 12,
+  },
+  recsBadge: {
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    color: 'rgba(255,255,255,0.85)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 999,
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  recsMuted: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 12,
+  },
+  recsError: {
+    color: 'rgba(255,120,120,0.95)',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  recsCard: {
+    flexDirection: 'row',
+    gap: 12,
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.10)',
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    marginTop: 10,
+  },
+  recsPoster: {
+    width: 52,
+    height: 78,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+  },
+  recsPosterFallback: {
+    width: 52,
+    height: 78,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+  },
+  recsBody: {
+    flex: 1,
+  },
+  recsCardTitle: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '800',
+    lineHeight: 18,
+  },
+  recsReason: {
+    marginTop: 4,
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  recsSmallMuted: {
+    marginTop: 6,
+    color: 'rgba(255,255,255,0.55)',
+    fontSize: 11,
+    fontWeight: '700',
   },
 });

@@ -102,8 +102,7 @@ export function SideMenu({ visible, onClose }: { visible: boolean; onClose: () =
           </Pressable>
 
           <View style={{ height: 10 }} />
-
-          <Text style={styles.hint}>Next: Recommendations</Text>
+          <Text style={styles.hint}>Open any movie to see recommendations.</Text>
         </SafeAreaView>
       </Animated.View>
     </Modal>

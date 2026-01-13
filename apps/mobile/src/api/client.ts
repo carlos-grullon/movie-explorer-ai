@@ -35,6 +35,20 @@ export type Favorite = {
   updatedAt?: string;
 };
 
+export type Recommendation = {
+  title: string;
+  year?: string;
+  reason?: string;
+  tmdbMovieId: number | null;
+  posterPath?: string | null;
+};
+
+export type RecommendationsResponse = {
+  recommendations: Recommendation[];
+  source?: 'openai' | 'tmdb';
+  message?: string;
+};
+
 const DEFAULT_API_BASE_URL = 'http://192.168.100.8:4000';
 
 export function getApiBaseUrl(): string {
@@ -92,6 +106,10 @@ export function tmdbSearch(query: string, page = 1) {
 
 export function tmdbMovieDetails(movieId: number) {
   return apiFetch<TmdbMovieDetails>(`/tmdb/movie/${movieId}`);
+}
+
+export async function recommendationsGet(accessToken: string, movieId: number): Promise<RecommendationsResponse> {
+  return apiFetchAuthed<RecommendationsResponse>(`/recommendations/${encodeURIComponent(String(movieId))}`, accessToken);
 }
 
 export async function favoritesList(accessToken: string): Promise<Favorite[]> {
