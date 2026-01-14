@@ -58,7 +58,7 @@ jobs:
       - name: Build and push API image
         run: |
           IMAGE_URI="$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
-          docker build -t "$IMAGE_URI" services/api
+          docker build -t "$IMAGE_URI" -f services/api/Dockerfile services/api
           docker push "$IMAGE_URI"
 
       - name: Trigger App Runner auto-deploy (pull latest image)

@@ -3,15 +3,15 @@
 FROM node:20-alpine AS deps
 WORKDIR /app
 
-# Install dependencies for the API package only (not the whole monorepo)
-COPY services/api/package.json services/api/package-lock.json* ./
+# Install dependencies for the API package (context = services/api)
+COPY package.json package-lock.json* ./
 RUN npm ci
 
 FROM node:20-alpine AS build
 WORKDIR /app
 
 COPY --from=deps /app/node_modules ./node_modules
-COPY services/api/ ./
+COPY ./ ./
 
 # Prisma client needs to be generated during build
 RUN npm run prisma:generate
@@ -23,7 +23,7 @@ WORKDIR /app
 ENV NODE_ENV=production
 
 # Install production dependencies only
-COPY services/api/package.json services/api/package-lock.json* ./
+COPY package.json package-lock.json* ./
 RUN npm ci --omit=dev
 
 COPY --from=build /app/dist ./dist
