@@ -80,3 +80,10 @@ npm run dev:api
 - Web en AWS Amplify (pendiente).
 - Backend en AWS App Runner (listo: https://epw3x6q244.us-east-2.awsapprunner.com).
 - README pendiente de guías de despliegue y documentación de patrones formales (hooks/containers en web).
+
+## CI/CD
+- GitHub Actions (`.github/workflows/ci.yml`):
+  - Ejecuta tests en cada `push`/`pull_request` a `main` (web con Vitest, backend con Jest/Supertest).
+  - En `push` a `main`: build de imagen backend (`services/api`), push a ECR y `aws apprunner start-deployment` para redeploy automático.
+- Web: usar CI/CD nativo de AWS Amplify por rama; no duplicar pipeline en Actions.
+- Secrets necesarios en GitHub (Settings → Secrets → Actions): `AWS_ROLE_TO_ASSUME`, `AWS_REGION`, `AWS_ECR_REGISTRY`, `AWS_ECR_REPOSITORY`, `APP_RUNNER_SERVICE_ARN`.
