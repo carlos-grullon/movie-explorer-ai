@@ -23,7 +23,7 @@ jobs:
         run: npm install
 
       - name: Generate Prisma client (api)
-        run: npx prisma generate --schema services/api/prisma/schema.prisma
+        run: npm run prisma:generate --workspace api
 
       - name: Test backend (api)
         run: npm test --workspace api
