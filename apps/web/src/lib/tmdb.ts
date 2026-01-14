@@ -24,7 +24,7 @@ type TmdbGenresResponse = {
 };
 
 function apiBaseUrl(): string {
-  const v = process.env.API_BASE_URL;
+  const v = process.env.NEXT_PUBLIC_API_BASE_URL;
   return v?.replace(/\/$/, '') || 'http://localhost:4000';
 }
 

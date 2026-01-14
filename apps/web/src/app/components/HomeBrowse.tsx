@@ -5,6 +5,8 @@ import { useMemo, useState } from 'react';
 
 import { useQuery } from '@tanstack/react-query';
 
+import { backendUrl } from '@/lib/backend';
+
 type Genre = { id: number; name: string };
 
 type ListResponse = {
@@ -34,6 +36,8 @@ function yearOptions(): Array<number> {
   return years;
 }
 
+const tmdbBaseUrl = backendUrl('/tmdb');
+
 export function HomeBrowse() {
   const [query, setQuery] = useState('');
   const [submitted, setSubmitted] = useState('');
@@ -53,7 +57,7 @@ export function HomeBrowse() {
   const genresQuery = useQuery({
     queryKey: ['tmdb', 'genres'],
     queryFn: async (): Promise<{ genres: Genre[] }> => {
-      const res = await fetch('/api/tmdb/genres', { cache: 'no-store' });
+      const res = await fetch(`${tmdbBaseUrl}/genres`, { cache: 'no-store' });
       if (!res.ok) throw new Error((await res.json()).message ?? 'Failed to load genres');
       return (await res.json()) as { genres: Genre[] };
     },
@@ -63,7 +67,7 @@ export function HomeBrowse() {
     queryKey: ['tmdb', mode, submitted, page, selectedGenres.join(','), yearNumber ?? ''],
     queryFn: async (): Promise<ListResponse> => {
       if (mode === 'trending') {
-        const res = await fetch(`/api/tmdb/trending?page=${page}`, { cache: 'no-store' });
+        const res = await fetch(`${tmdbBaseUrl}/trending?page=${page}`, { cache: 'no-store' });
         if (!res.ok) throw new Error((await res.json()).message ?? 'Failed to load trending');
         return (await res.json()) as ListResponse;
       }
@@ -73,7 +77,7 @@ export function HomeBrowse() {
         params.set('page', String(page));
         if (selectedGenres.length) params.set('genres', selectedGenres.join(','));
         if (yearNumber) params.set('year', String(yearNumber));
-        const res = await fetch(`/api/tmdb/discover?${params.toString()}`, { cache: 'no-store' });
+        const res = await fetch(`${tmdbBaseUrl}/discover?${params.toString()}`, { cache: 'no-store' });
         if (!res.ok) throw new Error((await res.json()).message ?? 'Failed to load discover');
         return (await res.json()) as ListResponse;
       }
@@ -84,7 +88,7 @@ export function HomeBrowse() {
       if (yearNumber) params.set('year', String(yearNumber));
       if (selectedGenres.length) params.set('genres', selectedGenres.join(','));
 
-      const res = await fetch(`/api/tmdb/search?${params.toString()}`, { cache: 'no-store' });
+      const res = await fetch(`${tmdbBaseUrl}/search?${params.toString()}`, { cache: 'no-store' });
       if (!res.ok) throw new Error((await res.json()).message ?? 'Search failed');
       return (await res.json()) as ListResponse;
     },

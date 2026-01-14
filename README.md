@@ -46,6 +46,7 @@ npm run dev:api
 ### Web (`apps/web/.env.local`)
 - `TMDB_API_KEY` (requerida salvo `TMDB_MOCK=true`)
 - `TMDB_MOCK` (`true`/`false`) — usa dataset TMDb mock embebido si no hay API key.
+- `NEXT_PUBLIC_API_BASE_URL` **(producción)**: URL pública del backend en App Runner (sin `/api` al final). Ej: `https://epw3x6q244.us-east-2.awsapprunner.com`.
 - Auth0 (favoritos autenticados):  
   `AUTH0_SECRET`, `AUTH0_BASE_URL`, `AUTH0_ISSUER_BASE_URL`, `AUTH0_CLIENT_ID`, `AUTH0_CLIENT_SECRET`, `AUTH0_AUDIENCE`
 
@@ -77,13 +78,13 @@ npm run dev:api
 - Mobile: MVP Expo con login, búsqueda, detalles, favoritos, recomendaciones.
 
 ## Roadmap / Deploy
-- Web en AWS Amplify (pendiente).
-- Backend en AWS App Runner (listo: https://epw3x6q244.us-east-2.awsapprunner.com).
+- Web en AWS Amplify (desplegado: https://main.d3qdp570j073t1.amplifyapp.com/).
+- Backend en AWS App Runner (desplegado: https://epw3x6q244.us-east-2.awsapprunner.com).
 - README pendiente de guías de despliegue y documentación de patrones formales (hooks/containers en web).
 
 ## CI/CD
 - GitHub Actions (`.github/workflows/ci.yml`):
   - Ejecuta tests en cada `push`/`pull_request` a `main` (web con Vitest, backend con Jest/Supertest).
   - En `push` a `main`: build de imagen backend (`services/api`), push a ECR y `aws apprunner start-deployment` para redeploy automático.
-- Web: usar CI/CD nativo de AWS Amplify por rama; no duplicar pipeline en Actions.
+- Web: usar CI/CD nativo de AWS Amplify por rama; no duplicar pipeline en Actions. **Configurar env en Amplify**: `NEXT_PUBLIC_API_BASE_URL` apuntando al backend de App Runner.
 - Secrets necesarios en GitHub (Settings → Secrets → Actions): `AWS_ROLE_TO_ASSUME`, `AWS_REGION`, `AWS_ECR_REGISTRY`, `AWS_ECR_REPOSITORY`, `APP_RUNNER_SERVICE_ARN`.
