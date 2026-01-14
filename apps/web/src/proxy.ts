@@ -24,7 +24,22 @@ export default async function proxy(request: NextRequest) {
     }
   }
 
-  return auth0.middleware(request);
+  try {
+    return await auth0.middleware(request);
+  } catch (err) {
+    const isAuthRoute = request.nextUrl.pathname.startsWith('/auth/');
+    if (!isAuthRoute) throw err;
+
+    const e = err as { name?: string; message?: string; stack?: string };
+    return Response.json(
+      {
+        error: 'Auth0 middleware exception',
+        name: e?.name ?? 'Error',
+        message: e?.message ?? String(err),
+      },
+      { status: 500 }
+    );
+  }
 }
 
 export const config = {
