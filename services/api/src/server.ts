@@ -16,8 +16,10 @@ export async function createApp() {
   app.use(helmet());
   app.use(
     cors({
-      origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : true,
-      credentials: true,
+      origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : '*',
+      credentials: Boolean(process.env.CORS_ORIGIN),
+      methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization'],
     })
   );
   app.use(express.json());

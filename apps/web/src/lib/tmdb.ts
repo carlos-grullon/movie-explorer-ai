@@ -23,13 +23,10 @@ type TmdbGenresResponse = {
   genres: TmdbGenre[];
 };
 
-function apiBaseUrl(): string {
-  const v = process.env.NEXT_PUBLIC_API_BASE_URL;
-  return v?.replace(/\/$/, '') || 'http://localhost:4000';
-}
+import { backendUrl } from './backend';
 
 async function fetchFromBackend<T>(path: string, searchParams?: URLSearchParams): Promise<T> {
-  const url = new URL(`${apiBaseUrl()}${path}`);
+  const url = new URL(backendUrl(path));
   if (searchParams) {
     searchParams.forEach((val, key) => url.searchParams.append(key, val));
   }

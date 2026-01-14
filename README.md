@@ -66,10 +66,12 @@ npm run dev:api
   Cobertura crítica: HomeBrowse (trending inicial, búsqueda por título, filtros año+género en discover).
 
 ## Patrones de arquitectura
-- **BFF / API Gateway (Next.js routes):** `apps/web/src/app/api/*` reenvían al backend y anexan Auth0 tokens.
-- **Capa backend en 3 niveles:** Router → Service → Clients/Repositories. Separación de validación, lógica y acceso externo/DB.
-- **Auth como middleware:** `requireAuth` en backend; sesión Auth0 en web.
-- **Resiliencia:** Recomendaciones usan OpenAI si está disponible; fallback a TMDb similar en caso de fallo/ausencia.
+- **Frontend (Web):**
+  - Data fetching vía hooks + React Query con helpers en `apps/web/src/lib/tmdb.ts` / `lib/backend.ts`.
+  - Páginas/Componentes se mantienen presentacionales, consumen hooks y muestran UI (ej. `HomeBrowse`, `FavoritesList`, `Recommendations`).
+  - Rutas API de Next (`apps/web/src/app/api/*`) actúan como BFF para favoritos/recommendations, añadiendo tokens Auth0 al backend.
+- **Backend:** Capa en 3 niveles: Router → Service → Clients/Repositories. Validación con `zod`; Auth middleware `requireAuth`.
+- **Resiliencia:** Recomendaciones usan OpenAI si está disponible; fallback a TMDb similar si falla/ausente.
 - **Monitoreo (opt-in):** Logs de prompts/respuestas OpenAI a archivo, activados por env.
 
 ## Estado actual (resumen)
@@ -80,7 +82,7 @@ npm run dev:api
 ## Roadmap / Deploy
 - Web en AWS Amplify (desplegado: https://main.d3qdp570j073t1.amplifyapp.com/).
 - Backend en AWS App Runner (desplegado: https://epw3x6q244.us-east-2.awsapprunner.com).
-- README pendiente de guías de despliegue y documentación de patrones formales (hooks/containers en web).
+- Patrones frontend documentados arriba; guía de despliegue cubierta en CI/CD y variables de entorno.
 
 ## CI/CD
 - GitHub Actions (`.github/workflows/ci.yml`):
