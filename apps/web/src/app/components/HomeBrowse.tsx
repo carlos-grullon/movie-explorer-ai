@@ -198,6 +198,7 @@ export function HomeBrowse() {
 
         <select
           className="w-[130px] rounded-md border border-border bg-input px-3 py-2 text-sm text-foreground"
+          aria-label="Year"
           value={year ?? ''}
           onChange={(e) => {
             const v = e.target.value;

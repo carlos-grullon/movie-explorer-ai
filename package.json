@@ -11,5 +11,10 @@
     "dev:api": "npm run dev --workspace api",
     "build": "npm run build --workspace web && npm run build --workspace api",
     "lint": "npm run lint --workspace web"
+  },
+  "devDependencies": {
+    "@types/text-encoding": "^0.0.40",
+    "broadcast-channel": "^7.2.0",
+    "text-encoding": "^0.7.0"
   }
 }

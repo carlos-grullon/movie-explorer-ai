@@ -6,7 +6,8 @@
     "dev": "next dev --webpack",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "vitest run"
   },
   "dependencies": {
     "@auth0/nextjs-auth0": "^4.14.0",
@@ -21,6 +22,13 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@testing-library/jest-dom": "^6.5.0",
+    "@testing-library/react": "^16.0.0",
+    "@testing-library/user-event": "^14.5.2",
+    "msw": "^2.3.1",
+    "web-streams-polyfill": "^3.3.3",
+    "jsdom": "^24.0.0",
+    "vitest": "^1.3.1",
     "nanoid": "^5.1.5",
     "picocolors": "^1.1.1",
     "babel-plugin-react-compiler": "1.0.0",
