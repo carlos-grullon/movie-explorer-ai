@@ -63,6 +63,7 @@ describe('HomeBrowse', () => {
 
   it('aplica filtros de año y género en discover', async () => {
     server.use(
+      http.get('/api/tmdb/trending', () => HttpResponse.json(sampleResults)),
       http.get('/api/tmdb/genres', () => HttpResponse.json(sampleGenres)),
       http.get('/api/tmdb/discover', ({ request }) => {
         const url = new URL(request.url);
