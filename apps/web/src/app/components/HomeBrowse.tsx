@@ -82,6 +82,7 @@ export function HomeBrowse() {
       params.set('query', submitted);
       params.set('page', String(page));
       if (yearNumber) params.set('year', String(yearNumber));
+      if (selectedGenres.length) params.set('genres', selectedGenres.join(','));
 
       const res = await fetch(`/api/tmdb/search?${params.toString()}`, { cache: 'no-store' });
       if (!res.ok) throw new Error((await res.json()).message ?? 'Search failed');

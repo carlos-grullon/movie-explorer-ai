@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
 
-import { proxyGetToApi } from '../../_utils/backendProxy';
+import { tmdbGetGenres } from '@/lib/tmdb';
 
 export async function GET() {
   try {
-    return await proxyGetToApi('/tmdb/genres');
+    const data = await tmdbGetGenres();
+    return NextResponse.json(data);
   } catch (e: any) {
     return NextResponse.json({ message: e?.message ?? 'TMDb error' }, { status: 502 });
   }
