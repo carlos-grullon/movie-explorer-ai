@@ -1,5 +1,7 @@
 'use client';
 
+import Link from 'next/link';
+
 import { useEffect, useRef, useState } from 'react';
 
 function firstInitial(name: string | null | undefined): string {
@@ -20,12 +22,20 @@ export function AuthButtons({
   const [open, setOpen] = useState(false);
   const [renderMenu, setRenderMenu] = useState(false);
   const [animateIn, setAnimateIn] = useState(false);
-  const [imageError, setImageError] = useState(false);
+  const [imageErrorUrl, setImageErrorUrl] = useState<string | null>(null);
   const rootRef = useRef<HTMLDivElement | null>(null);
 
-  useEffect(() => {
-    setImageError(false);
-  }, [pictureUrl]);
+  function openMenu() {
+    setRenderMenu(true);
+    setOpen(true);
+    requestAnimationFrame(() => setAnimateIn(true));
+  }
+
+  function closeMenu() {
+    setOpen(false);
+    setAnimateIn(false);
+    setTimeout(() => setRenderMenu(false), 140);
+  }
 
   useEffect(() => {
     if (!open) return;
@@ -34,7 +44,7 @@ export function AuthButtons({
       const el = rootRef.current;
       if (!el) return;
       if (e.target instanceof Node && el.contains(e.target)) return;
-      setOpen(false);
+      closeMenu();
     }
 
     document.addEventListener('mousedown', onDocMouseDown);
@@ -42,27 +52,10 @@ export function AuthButtons({
   }, [open]);
 
   useEffect(() => {
-    let t: ReturnType<typeof setTimeout> | null = null;
-
-    if (open) {
-      setRenderMenu(true);
-      const raf = requestAnimationFrame(() => setAnimateIn(true));
-      return () => cancelAnimationFrame(raf);
-    }
-
-    setAnimateIn(false);
-    t = setTimeout(() => setRenderMenu(false), 140);
-
-    return () => {
-      if (t) clearTimeout(t);
-    };
-  }, [open]);
-
-  useEffect(() => {
     if (!open) return;
 
     function onKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Escape') setOpen(false);
+      if (e.key === 'Escape') closeMenu();
     }
 
     document.addEventListener('keydown', onKeyDown);
@@ -75,20 +68,20 @@ export function AuthButtons({
         <>
           <button
             type="button"
-            onClick={() => setOpen((v) => !v)}
+            onClick={() => (open ? closeMenu() : openMenu())}
             className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-purple-600 text-base font-semibold text-white shadow-sm ring-1 ring-purple-600/30 hover:bg-purple-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             aria-label="Account menu"
             aria-haspopup="menu"
             aria-expanded={open}
           >
-            {pictureUrl && !imageError ? (
+            {pictureUrl && imageErrorUrl !== pictureUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={pictureUrl}
                 alt=""
                 className="h-full w-full object-cover"
                 referrerPolicy="no-referrer"
-                onError={() => setImageError(true)}
+                onError={() => setImageErrorUrl(pictureUrl)}
               />
             ) : (
               firstInitial(displayName)
@@ -104,23 +97,23 @@ export function AuthButtons({
             >
               <div className="px-3 py-2 text-xs text-muted-foreground">{displayName || 'Signed in'}</div>
               <div className="h-px bg-border" />
-              <a
+              <Link
                 role="menuitem"
                 className="block px-3 py-2 text-sm font-medium text-foreground hover:bg-muted focus:bg-muted focus:outline-none"
                 href="/auth/logout"
               >
                 Log out
-              </a>
+              </Link>
             </div>
           ) : null}
         </>
       ) : (
-        <a
+        <Link
           className="rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
           href="/auth/login"
         >
           Login
-        </a>
+        </Link>
       )}
     </div>
   );

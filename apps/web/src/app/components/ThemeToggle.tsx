@@ -15,15 +15,15 @@ function applyTheme(theme: Theme) {
 }
 
 export function ThemeToggle() {
-  const [theme, setTheme] = useState<Theme>('light');
-
-  useEffect(() => {
+  const [theme, setTheme] = useState<Theme>(() => {
     const saved = (localStorage.getItem('theme') as Theme | null) ?? null;
     const domTheme: Theme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
-    const next = saved === 'dark' ? 'dark' : saved === 'light' ? 'light' : domTheme;
-    setTheme(next);
-    applyTheme(next);
-  }, []);
+    return saved === 'dark' ? 'dark' : saved === 'light' ? 'light' : domTheme;
+  });
+
+  useEffect(() => {
+    applyTheme(theme);
+  }, [theme]);
 
   return (
     <button

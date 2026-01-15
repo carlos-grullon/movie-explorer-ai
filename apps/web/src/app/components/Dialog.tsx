@@ -10,18 +10,20 @@ export function Dialog(props: {
   footer?: React.ReactNode;
   onClose: () => void;
 }) {
+  const { open, onClose } = props;
+
   useEffect(() => {
-    if (!props.open) return;
+    if (!open) return;
 
     function onKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Escape') props.onClose();
+      if (e.key === 'Escape') onClose();
     }
 
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
-  }, [props.open, props.onClose]);
+  }, [open, onClose]);
 
-  if (!props.open) return null;
+  if (!open) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">

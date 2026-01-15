@@ -24,6 +24,7 @@ type RecommendationsResponse = {
 export function Recommendations(props: { movieId: number }) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [needsLogin, setNeedsLogin] = useState(false);
   const [items, setItems] = useState<Recommendation[]>([]);
   const [source, setSource] = useState<'openai' | 'tmdb' | null>(null);
   const [postersByTmdbId, setPostersByTmdbId] = useState<Record<number, string | null | undefined>>({});
@@ -40,6 +41,7 @@ export function Recommendations(props: { movieId: number }) {
       setIsLoading(true);
       setError(null);
       setSource(null);
+      setNeedsLogin(false);
       try {
         const res = await fetch(`/api/recommendations/${encodeURIComponent(String(props.movieId))}`, {
           cache: 'no-store',
@@ -56,7 +58,12 @@ export function Recommendations(props: { movieId: number }) {
         if (!res.ok) {
           const message = json?.message ?? (text || `Failed to load recommendations (HTTP ${res.status})`);
           if (res.status === 401) {
-            throw new Error(message);
+            if (!cancelled) {
+              setNeedsLogin(true);
+              setItems([]);
+              setSource(null);
+            }
+            throw new Error('Log in to see recommendations.');
           }
           throw new Error(message);
         }
@@ -66,8 +73,9 @@ export function Recommendations(props: { movieId: number }) {
           setItems(recs.slice(0, 5));
           setSource(json?.source ?? null);
         }
-      } catch (e: any) {
-        if (!cancelled) setError(e?.message ?? 'Failed to load recommendations');
+      } catch (e: unknown) {
+        const message = e instanceof Error ? e.message : 'Failed to load recommendations';
+        if (!cancelled) setError(message);
       } finally {
         if (!cancelled) setIsLoading(false);
       }
@@ -92,8 +100,10 @@ export function Recommendations(props: { movieId: number }) {
           try {
             const res = await fetch(`/api/tmdb/movie/${id}`, { cache: 'no-store' });
             if (!res.ok) return [id, null] as const;
-            const json = (await res.json().catch(() => null)) as any;
-            return [id, (typeof json?.poster_path === 'string' ? json.poster_path : null) as string | null] as const;
+            const json = (await res.json().catch(() => null)) as unknown;
+            const obj = json && typeof json === 'object' ? (json as Record<string, unknown>) : null;
+            const posterPath = typeof obj?.poster_path === 'string' ? obj.poster_path : null;
+            return [id, posterPath] as const;
           } catch {
             return [id, null] as const;
           }
@@ -130,7 +140,19 @@ export function Recommendations(props: { movieId: number }) {
         {isLoading ? <div className="text-sm text-muted-foreground">Loading…</div> : null}
 
         {error ? (
-          <div className="text-sm text-destructive">{error}</div>
+          <div className="text-sm text-destructive">
+            {error}
+            {needsLogin ? (
+              <div className="mt-3">
+                <Link
+                  className="inline-flex rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+                  href="/auth/login"
+                >
+                  Log in
+                </Link>
+              </div>
+            ) : null}
+          </div>
         ) : null}
 
         {!isLoading && !error && items.length === 0 ? (

@@ -12,18 +12,20 @@ export function AlertDialog(props: {
   onConfirm: () => void;
   onCancel: () => void;
 }) {
+  const { open, onCancel } = props;
+
   useEffect(() => {
-    if (!props.open) return;
+    if (!open) return;
 
     function onKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Escape') props.onCancel();
+      if (e.key === 'Escape') onCancel();
     }
 
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
-  }, [props.open, props.onCancel]);
+  }, [open, onCancel]);
 
-  if (!props.open) return null;
+  if (!open) return null;
 
   const confirmLabel = props.confirmLabel ?? 'Confirm';
   const cancelLabel = props.cancelLabel ?? 'Cancel';

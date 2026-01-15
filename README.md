@@ -5,6 +5,7 @@ Web + API (y mobile) para explorar películas (TMDb), ver detalles, gestionar fa
 ## Índice rápido
 - [Tecnologías](#tecnologías)
 - [Ejecución local](#ejecución-local)
+- [Mobile (Expo Go)](#mobile-expo-go)
 - [Variables de entorno](#variables-de-entorno)
 - [Tests](#tests)
 - [Patrones de arquitectura](#patrones-de-arquitectura)
@@ -41,6 +42,29 @@ Solo API:
 npm run dev:api
 ```
 
+## Mobile (Expo Go)
+
+Instalación de dependencias (desde la raíz):
+```bash
+npm install
+```
+
+Levantar el bundler de Expo:
+```bash
+npm run start --workspace mobile
+```
+
+Abrir en el teléfono:
+- **iOS:** instala **Expo Go** (App Store) y escanea el QR con la **cámara** (o desde Expo Go).
+- **Android:** instala **Expo Go** (Play Store) y usa **Scan QR Code** dentro de Expo Go.
+
+Si el QR no funciona:
+- Asegúrate de que el PC y el teléfono estén en la **misma red Wi-Fi**.
+- Prueba modo tunnel:
+```bash
+npm run start --workspace mobile -- --tunnel
+```
+
 ## Variables de entorno
 
 ### Web (`apps/web/.env.local`)
@@ -48,7 +72,7 @@ npm run dev:api
 - `TMDB_MOCK` (`true`/`false`) — usa dataset TMDb mock embebido si no hay API key.
 - `NEXT_PUBLIC_API_BASE_URL` **(producción)**: URL pública del backend en App Runner (sin `/api` al final). Ej: `https://epw3x6q244.us-east-2.awsapprunner.com`.
 - Auth0 (favoritos autenticados):  
-  `AUTH0_SECRET`, `AUTH0_BASE_URL`, `AUTH0_ISSUER_BASE_URL`, `AUTH0_CLIENT_ID`, `AUTH0_CLIENT_SECRET`, `AUTH0_AUDIENCE`
+  `AUTH0_SECRET`, `APP_BASE_URL`, `AUTH0_DOMAIN`, `AUTH0_CLIENT_ID`, `AUTH0_CLIENT_SECRET`, `AUTH0_AUDIENCE`
 
 ### API (`services/api/.env`)
 - `DATABASE_URL`

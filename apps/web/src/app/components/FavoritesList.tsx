@@ -33,6 +33,7 @@ export function FavoritesList() {
   const [favorites, setFavorites] = useState<Favorite[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [needsLogin, setNeedsLogin] = useState(false);
   const [overviewsByTmdbId, setOverviewsByTmdbId] = useState<Record<number, string>>({});
   const [genresByTmdbId, setGenresByTmdbId] = useState<Record<number, string[]>>({});
 
@@ -47,13 +48,21 @@ export function FavoritesList() {
   const loadFavorites = useCallback(async () => {
     setIsLoading(true);
     setError(null);
+    setNeedsLogin(false);
     try {
       const res = await fetch('/api/favorites', { cache: 'no-store' });
       const json = (await res.json().catch(() => ({}))) as Partial<ListFavoritesResponse> & { message?: string };
-      if (!res.ok) throw new Error(json?.message ?? 'Failed to load favorites');
+      if (!res.ok) {
+        if (res.status === 401) {
+          setNeedsLogin(true);
+          throw new Error('Log in to view your favorites.');
+        }
+        throw new Error(json?.message ?? 'Failed to load favorites');
+      }
       setFavorites(Array.isArray(json.favorites) ? json.favorites : []);
-    } catch (e: any) {
-      setError(e?.message ?? 'Failed to load favorites');
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : 'Failed to load favorites';
+      setError(message);
     } finally {
       setIsLoading(false);
     }
@@ -62,12 +71,12 @@ export function FavoritesList() {
   useEffect(() => {
     void loadFavorites();
 
-    function onChanged() {
+    const onChanged: EventListener = () => {
       void loadFavorites();
-    }
+    };
 
-    window.addEventListener('favorites:changed', onChanged as any);
-    return () => window.removeEventListener('favorites:changed', onChanged as any);
+    window.addEventListener('favorites:changed', onChanged);
+    return () => window.removeEventListener('favorites:changed', onChanged);
   }, [loadFavorites]);
 
   useEffect(() => {
@@ -84,9 +93,18 @@ export function FavoritesList() {
           try {
             const res = await fetch(`/api/tmdb/movie/${tmdbId}`, { cache: 'no-store' });
             if (!res.ok) return [tmdbId, '', [] as string[]] as const;
-            const json = (await res.json().catch(() => null)) as any;
-            const overview = String(json?.overview ?? '');
-            const genres = Array.isArray(json?.genres) ? json.genres.map((g: any) => String(g?.name ?? '')).filter(Boolean) : [];
+            const json = (await res.json().catch(() => null)) as unknown;
+            const obj = json && typeof json === 'object' ? (json as Record<string, unknown>) : null;
+            const overview = String(obj?.overview ?? '');
+            const genresRaw = obj?.genres;
+            const genres = Array.isArray(genresRaw)
+              ? genresRaw
+                  .map((g) => {
+                    const gg = g && typeof g === 'object' ? (g as Record<string, unknown>) : null;
+                    return String(gg?.name ?? '');
+                  })
+                  .filter(Boolean)
+              : [];
             return [tmdbId, overview, genres] as const;
           } catch {
             return [tmdbId, '', [] as string[]] as const;
@@ -102,7 +120,7 @@ export function FavoritesList() {
       });
       setGenresByTmdbId((prev) => {
         const next = { ...prev };
-        for (const [tmdbId, _overview, genres] of results) next[tmdbId] = genres;
+        for (const [tmdbId, , genres] of results) next[tmdbId] = genres;
         return next;
       });
     }
@@ -137,9 +155,10 @@ export function FavoritesList() {
           throw new Error(message ?? `Failed to remove favorite (HTTP ${res.status})${text ? `: ${text}` : ''}`);
         }
         window.dispatchEvent(new Event('favorites:changed'));
-      } catch (e: any) {
+      } catch (e: unknown) {
+        const message = e instanceof Error ? e.message : 'Failed to remove favorite';
         setFavorites(prev);
-        setError(e?.message ?? 'Failed to remove favorite');
+        setError(message);
       } finally {
         setRemovingId(null);
       }
@@ -184,9 +203,10 @@ export function FavoritesList() {
 
       window.dispatchEvent(new Event('favorites:changed'));
       setEditing(null);
-    } catch (e: any) {
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : 'Failed to update favorite';
       setFavorites(prev);
-      setError(e?.message ?? 'Failed to update favorite');
+      setError(message);
     } finally {
       setIsSavingEdit(false);
     }
@@ -262,7 +282,19 @@ export function FavoritesList() {
       </Dialog>
 
       <div className="mb-4 flex items-center justify-between">
-        <div className="text-sm text-muted-foreground">{isLoading ? 'Loading…' : error ? error : favorites.length ? '' : 'No favorites yet.'}</div>
+        <div className="text-sm text-muted-foreground">
+          {isLoading ? 'Loading…' : error ? error : favorites.length ? '' : 'No favorites yet.'}
+          {needsLogin ? (
+            <div className="mt-3">
+              <Link
+                className="inline-flex rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+                href="/auth/login"
+              >
+                Log in
+              </Link>
+            </div>
+          ) : null}
+        </div>
         <div className="text-xs text-muted-foreground">{count}</div>
       </div>
 

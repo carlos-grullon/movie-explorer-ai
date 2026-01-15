@@ -298,6 +298,32 @@ export function HomeBrowse() {
           );
         })}
       </div>
+
+      {!listQuery.isLoading && !listQuery.error && totalPages > 1 ? (
+        <div className="mt-6 flex items-center justify-between">
+          <button
+            className="rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground hover:bg-muted disabled:opacity-50"
+            disabled={!canPrev}
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            type="button"
+          >
+            Prev
+          </button>
+
+          <div className="text-sm text-muted-foreground">
+            Page {page} of {totalPages}
+          </div>
+
+          <button
+            className="rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground hover:bg-muted disabled:opacity-50"
+            disabled={!canNext}
+            onClick={() => setPage((p) => p + 1)}
+            type="button"
+          >
+            Next
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 }

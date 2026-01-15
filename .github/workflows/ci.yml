@@ -31,6 +31,12 @@ jobs:
       - name: Test web (web)
         run: npm test --workspace web
 
+      - name: Lint (web)
+        run: npm run lint
+
+      - name: Build (web + api)
+        run: npm run build
+
   deploy-api:
     needs: test
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -42,6 +48,7 @@ jobs:
       ECR_REGISTRY: ${{ secrets.AWS_ECR_REGISTRY }}
       ECR_REPOSITORY: ${{ secrets.AWS_ECR_REPOSITORY }}
       IMAGE_TAG: ${{ github.sha }}
+      APP_RUNNER_IMAGE_TAG: apprunner-6
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -58,11 +65,43 @@ jobs:
       - name: Build and push API image
         run: |
           IMAGE_URI="$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+          APP_RUNNER_IMAGE_URI="$ECR_REGISTRY/$ECR_REPOSITORY:$APP_RUNNER_IMAGE_TAG"
           docker build -t "$IMAGE_URI" -f services/api/Dockerfile services/api
+          docker tag "$IMAGE_URI" "$APP_RUNNER_IMAGE_URI"
           docker push "$IMAGE_URI"
+          docker push "$APP_RUNNER_IMAGE_URI"
 
       - name: Trigger App Runner auto-deploy (pull latest image)
         env:
           APP_RUNNER_SERVICE_ARN: ${{ secrets.APP_RUNNER_SERVICE_ARN }}
         run: |
-          aws apprunner start-deployment --service-arn "$APP_RUNNER_SERVICE_ARN"
+          STATUS=$(aws apprunner describe-service --service-arn "$APP_RUNNER_SERVICE_ARN" --query 'Service.Status' --output text)
+          echo "App Runner service status: $STATUS"
+
+          if [ "$STATUS" = "OPERATION_IN_PROGRESS" ]; then
+            echo "A deployment/operation is already in progress. Skipping start-deployment (best-effort)."
+            exit 0
+          fi
+
+          if [ "$STATUS" != "RUNNING" ]; then
+            echo "Skipping start-deployment because service is not RUNNING (best-effort)."
+            exit 0
+          fi
+
+          set +e
+          OUT=$(aws apprunner start-deployment --service-arn "$APP_RUNNER_SERVICE_ARN" 2>&1)
+          CODE=$?
+          set -e
+
+          if [ "$CODE" -eq 0 ]; then
+            echo "$OUT"
+            exit 0
+          fi
+
+          echo "$OUT"
+          if echo "$OUT" | grep -q "InvalidRequestException"; then
+            echo "StartDeployment rejected due to service state (best-effort). Not failing CI."
+            exit 0
+          fi
+
+          exit "$CODE"

@@ -13,7 +13,8 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
   try {
     const data = await tmdbGetMovieDetails(movieId);
     return NextResponse.json(data);
-  } catch (e: any) {
-    return NextResponse.json({ message: e?.message ?? 'TMDb error' }, { status: 502 });
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : 'TMDb error';
+    return NextResponse.json({ message }, { status: 502 });
   }
 }

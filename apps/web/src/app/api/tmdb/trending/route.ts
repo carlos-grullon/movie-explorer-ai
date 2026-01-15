@@ -11,7 +11,8 @@ export async function GET(req: Request) {
       Number.isFinite(page) && page > 0 ? page : 1
     );
     return NextResponse.json(data);
-  } catch (e: any) {
-    return NextResponse.json({ message: e?.message ?? 'TMDb error' }, { status: 502 });
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : 'TMDb error';
+    return NextResponse.json({ message }, { status: 502 });
   }
 }

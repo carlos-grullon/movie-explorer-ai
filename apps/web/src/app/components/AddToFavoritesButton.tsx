@@ -1,5 +1,7 @@
 'use client';
 
+import Link from 'next/link';
+
 import { useState } from 'react';
 
 export function AddToFavoritesButton(props: {
@@ -10,12 +12,14 @@ export function AddToFavoritesButton(props: {
 }) {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [needsLogin, setNeedsLogin] = useState(false);
   const [saved, setSaved] = useState(false);
 
   async function add() {
     setIsSaving(true);
     setError(null);
     setSaved(false);
+    setNeedsLogin(false);
 
     try {
       const res = await fetch('/api/favorites', {
@@ -38,12 +42,19 @@ export function AddToFavoritesButton(props: {
         message = undefined;
       }
 
-      if (!res.ok) throw new Error(message ?? `Failed to add favorite (HTTP ${res.status})${text ? `: ${text}` : ''}`);
+      if (!res.ok) {
+        if (res.status === 401) {
+          setNeedsLogin(true);
+          throw new Error('Log in to add favorites.');
+        }
+        throw new Error(message ?? `Failed to add favorite (HTTP ${res.status})${text ? `: ${text}` : ''}`);
+      }
 
       setSaved(true);
       window.dispatchEvent(new Event('favorites:changed'));
-    } catch (e: any) {
-      setError(e?.message ?? 'Failed to add favorite');
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : 'Failed to add favorite';
+      setError(message);
     } finally {
       setIsSaving(false);
     }
@@ -60,7 +71,21 @@ export function AddToFavoritesButton(props: {
         {isSaving ? 'Saving…' : 'Add to favorites'}
       </button>
 
-      {error ? <div className="mt-2 text-sm text-destructive">{error}</div> : null}
+      {error ? (
+        <div className="mt-2 text-sm text-destructive">
+          {error}
+          {needsLogin ? (
+            <div className="mt-3">
+              <Link
+                className="inline-flex rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+                href="/auth/login"
+              >
+                Log in
+              </Link>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
       {saved ? <div className="mt-2 text-sm text-muted-foreground">Saved.</div> : null}
     </div>
   );

@@ -79,8 +79,6 @@ export async function loginWithAuth0(): Promise<{ accessToken: string; idToken?:
   const clientId = auth0ClientId();
   const redirectUri = auth0RedirectUri();
 
-  console.log('[auth0] redirectUri:', redirectUri);
-
   const req = new AuthSession.AuthRequest({
     clientId,
     redirectUri,
