@@ -21,13 +21,13 @@ describe('TMDB router (mocked)', () => {
     );
   });
 
-  it('search applies year fallback to closest matches', async () => {
+  it('search filters by year when provided', async () => {
     const app = await setupApp();
 
     const res = await request(app).get('/tmdb/search').query({ query: 'matrix', year: 2010 });
 
     expect(res.status).toBe(200);
-    expect(res.body.results[0].title).toBe('The Matrix');
+    expect(res.body.results).toEqual([]);
   });
 
   it('search filters by genre ids', async () => {
@@ -44,6 +44,18 @@ describe('TMDB router (mocked)', () => {
     expect(res.body.results).not.toEqual(
       expect.arrayContaining([expect.objectContaining({ title: 'Interstellar' })])
     );
+  });
+
+  it('search sorts results by most recent release_date', async () => {
+    const app = await setupApp();
+
+    const res = await request(app).get('/tmdb/search').query({ query: 'the' });
+
+    expect(res.status).toBe(200);
+    const dates = res.body.results.map((r: any) => r.release_date).filter(Boolean);
+    for (let i = 1; i < dates.length; i++) {
+      expect(Date.parse(dates[i - 1])).toBeGreaterThanOrEqual(Date.parse(dates[i]));
+    }
   });
 
   it('discover respects year and genre filters', async () => {

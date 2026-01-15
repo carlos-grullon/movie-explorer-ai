@@ -150,18 +150,27 @@ export class TmdbClient {
       return Number.isFinite(y) ? y : null;
     };
 
+    const parseDateSortKey = (date?: string): number => {
+      if (!date || typeof date !== 'string') return Number.NEGATIVE_INFINITY;
+      const t = Date.parse(date);
+      return Number.isFinite(t) ? t : Number.NEGATIVE_INFINITY;
+    };
+
     const filterByGenre = (items: TmdbMovieListItem[]) => {
       if (!hasGenreFilter) return items;
       return items.filter((m) => Array.isArray(m.genre_ids) && m.genre_ids.some((g) => genreIds.includes(g)));
     };
 
-    const sortByYearCloseness = (items: TmdbMovieListItem[], targetYear: number) => {
+    const filterByYear = (items: TmdbMovieListItem[], year?: number) => {
+      if (!year) return items;
+      return items.filter((m) => parseYear(m.release_date) === year);
+    };
+
+    const sortByMostRecent = (items: TmdbMovieListItem[]) => {
       return [...items].sort((a, b) => {
-        const ay = parseYear(a.release_date) ?? Number.MAX_SAFE_INTEGER;
-        const by = parseYear(b.release_date) ?? Number.MAX_SAFE_INTEGER;
-        const diffA = Math.abs(ay - targetYear);
-        const diffB = Math.abs(by - targetYear);
-        if (diffA !== diffB) return diffA - diffB;
+        const bt = parseDateSortKey(b.release_date);
+        const at = parseDateSortKey(a.release_date);
+        if (bt !== at) return bt - at;
         return (a.title || '').localeCompare(b.title || '');
       });
     };
@@ -186,26 +195,8 @@ export class TmdbClient {
         return filtered;
       };
 
-      let filtered = applyFilters(matches, opts?.year);
-      if (opts?.year && filtered.length === 0) {
-        const withoutYear = applyFilters(matches, undefined).map(toListItem);
-        const sorted = sortByYearCloseness(withoutYear, opts.year);
-
-        const pageSize = 20;
-        const total_results = sorted.length;
-        const total_pages = Math.max(1, Math.ceil(total_results / pageSize));
-        const safePage = Math.min(targetPage, total_pages);
-        const start = (safePage - 1) * pageSize;
-
-        return {
-          page: safePage,
-          results: sorted.slice(start, start + pageSize),
-          total_pages,
-          total_results,
-        };
-      }
-
-      const listToPaginate = filtered.map(toListItem);
+      const filtered = applyFilters(matches, opts?.year);
+      const listToPaginate = sortByMostRecent(filtered.map(toListItem));
 
       const pageSize = 20;
       const total_results = listToPaginate.length;
@@ -244,32 +235,13 @@ export class TmdbClient {
     };
 
     const initial = await searchOnce(opts?.year);
-    const initialFiltered = filterByGenre(initial.results);
-
-    if (!opts?.year || initialFiltered.length > 0) {
-      return { ...initial, results: initialFiltered };
-    }
-
-    // Fallback: no results for that year, fetch without year and return closest year matches
-    const fallback = await searchOnce(undefined);
-    const fallbackFiltered = filterByGenre(fallback.results);
-
-    if (!fallbackFiltered.length) {
-      return { page: 1, results: [], total_pages: 0, total_results: 0 };
-    }
-
-    const sorted = sortByYearCloseness(fallbackFiltered, opts.year);
-    const pageSize = 20;
-    const total_results = sorted.length;
-    const total_pages = Math.max(1, Math.ceil(total_results / pageSize));
-    const safePage = Math.min(targetPage, total_pages);
-    const start = (safePage - 1) * pageSize;
+    const filtered = sortByMostRecent(filterByYear(filterByGenre(initial.results), opts?.year));
 
     return {
-      page: safePage,
-      results: sorted.slice(start, start + pageSize),
-      total_pages,
-      total_results,
+      ...initial,
+      results: filtered,
+      total_results: filtered.length,
+      total_pages: initial.total_pages,
     };
   }
 
@@ -380,7 +352,7 @@ export class TmdbClient {
     const url = new URL(`${TMDB_BASE_URL}/discover/movie`);
     url.searchParams.set('api_key', this.apiKey);
     url.searchParams.set('language', 'en-US');
-    url.searchParams.set('sort_by', 'popularity.desc');
+    url.searchParams.set('sort_by', 'primary_release_date.desc');
     url.searchParams.set('include_adult', 'false');
 
     if (opts.page) url.searchParams.set('page', String(opts.page));

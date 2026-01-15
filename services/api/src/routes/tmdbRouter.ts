@@ -22,11 +22,12 @@ tmdbRouter.get('/search', async (req, res, next) => {
     const query = z.string().min(1).parse(req.query.query);
     const page = z.coerce.number().int().positive().optional().parse(req.query.page);
     const year = z.coerce.number().int().optional().parse(req.query.year);
-    const genreIds = req.query.genreIds
+    const rawGenres = typeof req.query.genreIds === 'string' ? req.query.genreIds : typeof req.query.genres === 'string' ? req.query.genres : undefined;
+    const genreIds = rawGenres
       ? z
           .string()
           .transform((s) => s.split(',').map(Number))
-          .parse(req.query.genreIds)
+          .parse(rawGenres)
       : undefined;
 
     const result = await client.searchMovies(query, page ?? 1, { year, genreIds });
@@ -49,11 +50,12 @@ tmdbRouter.get('/discover', async (req, res, next) => {
   try {
     const page = z.coerce.number().int().positive().optional().parse(req.query.page);
     const year = z.coerce.number().int().optional().parse(req.query.year);
-    const genreIds = req.query.genreIds
+    const rawGenres = typeof req.query.genreIds === 'string' ? req.query.genreIds : typeof req.query.genres === 'string' ? req.query.genres : undefined;
+    const genreIds = rawGenres
       ? z
           .string()
           .transform((s) => s.split(',').map(Number))
-          .parse(req.query.genreIds)
+          .parse(rawGenres)
       : undefined;
 
     const result = await client.discoverMovies({ page, year, genreIds });

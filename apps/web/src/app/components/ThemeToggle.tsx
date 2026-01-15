@@ -16,7 +16,9 @@ function applyTheme(theme: Theme) {
 
 export function ThemeToggle() {
   const [theme, setTheme] = useState<Theme>(() => {
-    const saved = (localStorage.getItem('theme') as Theme | null) ?? null;
+    if (typeof window === 'undefined') return 'light';
+
+    const saved = (window.localStorage.getItem('theme') as Theme | null) ?? null;
     const domTheme: Theme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
     return saved === 'dark' ? 'dark' : saved === 'light' ? 'light' : domTheme;
   });
@@ -31,8 +33,10 @@ export function ThemeToggle() {
       onClick={() => {
         const next: Theme = theme === 'dark' ? 'light' : 'dark';
         setTheme(next);
-        localStorage.setItem('theme', next);
-        applyTheme(next);
+        if (typeof window !== 'undefined') {
+          window.localStorage.setItem('theme', next);
+          applyTheme(next);
+        }
       }}
       type="button"
     >
