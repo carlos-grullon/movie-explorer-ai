@@ -46,7 +46,7 @@ npm run dev:api
 
 Descargar el APK (Android):
 
-https://github.com/carlos-grullon/movie-explorer-ai/releases/download/v1.0.0/movie-explorer-ai.apk
+https://github.com/carlos-grullon/movie-explorer-ai/releases/download/v1.0.0/movie-app-challenge.apk
 
 Notas:
 - En Android, si no te deja instalar: habilita **Install unknown apps / Fuentes desconocidas** para el navegador/gestor de archivos.
