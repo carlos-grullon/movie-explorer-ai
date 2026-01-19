@@ -3,7 +3,7 @@ import 'react-native-gesture-handler';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { useState } from 'react';
 
 import { AuthProvider } from './src/auth/AuthProvider';
@@ -34,35 +34,30 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <AuthProvider>
-        <NavigationContainer theme={navTheme}>
-          <StatusBar style="light" backgroundColor="#0b0b0f" />
-          <SideMenu visible={menuOpen} onClose={() => setMenuOpen(false)} />
-          <Stack.Navigator
-            screenOptions={{
-              headerStyle: { backgroundColor: '#0b0b0f' },
-              headerTintColor: '#fff',
-              headerShadowVisible: false,
-              contentStyle: { backgroundColor: '#0b0b0f' },
-              headerTitleStyle: { color: '#fff' },
-              headerTitleAlign: 'left',
-              headerRight: () => <MenuButton onPress={() => setMenuOpen(true)} />,
-            }}
-          >
-            <Stack.Screen
-              name="Browse"
-              component={BrowseScreen}
-              options={{
-                title: 'Trending',
-                headerTitle: 'Trending',
+        <SafeAreaView style={{ flex: 1, backgroundColor: '#0b0b0f' }} edges={['top']}>
+          <NavigationContainer theme={navTheme}>
+            <StatusBar style="light" backgroundColor="#0b0b0f" translucent={false} />
+            <SideMenu visible={menuOpen} onClose={() => setMenuOpen(false)} />
+            <Stack.Navigator
+              screenOptions={{
                 headerShown: true,
+                headerTitle: 'Movie Explorer AI',
+                headerStyle: { backgroundColor: '#0b0b0f' },
+                headerTintColor: '#fff',
+                headerShadowVisible: false,
+                contentStyle: { backgroundColor: '#0b0b0f' },
                 headerTitleStyle: { color: '#fff' },
+                headerTitleAlign: 'left',
+                headerRight: () => <MenuButton onPress={() => setMenuOpen(true)} />,
               }}
-            />
-            <Stack.Screen name="Favorites" component={FavoritesScreen} options={{ title: 'Favorites' }} />
-            <Stack.Screen name="MovieDetails" component={MovieDetailsScreen} options={{ title: 'Movie' }} />
-            <Stack.Screen name="Recommendations" component={RecommendationsScreen} options={{ title: 'Recommendations' }} />
-          </Stack.Navigator>
-        </NavigationContainer>
+            >
+              <Stack.Screen name="Browse" component={BrowseScreen} />
+              <Stack.Screen name="Favorites" component={FavoritesScreen} />
+              <Stack.Screen name="MovieDetails" component={MovieDetailsScreen} />
+              <Stack.Screen name="Recommendations" component={RecommendationsScreen} />
+            </Stack.Navigator>
+          </NavigationContainer>
+        </SafeAreaView>
       </AuthProvider>
     </SafeAreaProvider>
   );
