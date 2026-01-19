@@ -13,14 +13,15 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import type { RootStackParamList } from '../navigation/types';
 import { useAuth } from '../auth/AuthProvider';
-import { favoritesList, tmdbPosterUrl, type Favorite } from '../api/client';
+import { ApiError, favoritesList, tmdbPosterUrl, type Favorite } from '../api/client';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Favorites'>;
 
 type State =
   | { kind: 'loading' }
   | { kind: 'ready'; favorites: Favorite[] }
-  | { kind: 'error'; message: string };
+  | { kind: 'error'; message: string }
+  | { kind: 'auth_required'; message: string };
 
 export function FavoritesScreen({ navigation }: Props) {
 
@@ -37,8 +38,13 @@ export function FavoritesScreen({ navigation }: Props) {
       setState({ kind: 'loading' });
       const items = await favoritesList(accessToken);
       setState({ kind: 'ready', favorites: items });
-    } catch (e: any) {
-      setState({ kind: 'error', message: e?.message ?? 'Failed to load favorites' });
+    } catch (e: unknown) {
+      if (e instanceof ApiError && e.status === 401) {
+        setState({ kind: 'auth_required', message: e.message });
+        return;
+      }
+      const message = e instanceof Error ? e.message : 'Failed to load favorites';
+      setState({ kind: 'error', message });
     }
   }, [status, accessToken]);
 
@@ -84,6 +90,29 @@ export function FavoritesScreen({ navigation }: Props) {
         <Text style={styles.muted}>{state.message}</Text>
         <Pressable style={styles.primaryButton} onPress={load}>
           <Text style={styles.primaryButtonText}>Retry</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
+  if (state.kind === 'auth_required') {
+    return (
+      <View style={styles.center}>
+        <Text style={styles.title}>Favorites</Text>
+        <Text style={styles.muted}>{state.message}</Text>
+        <Pressable
+          style={styles.primaryButton}
+          onPress={async () => {
+            try {
+              await login();
+              await load();
+            } catch (e: unknown) {
+              const message = e instanceof Error ? e.message : 'Login failed';
+              Alert.alert('Auth', message);
+            }
+          }}
+        >
+          <Text style={styles.primaryButtonText}>Iniciar sesión</Text>
         </Pressable>
       </View>
     );

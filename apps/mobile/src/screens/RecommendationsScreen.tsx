@@ -13,6 +13,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types';
 import { useAuth } from '../auth/AuthProvider';
 import {
+  ApiError,
   recommendationsGet,
   tmdbMovieDetails,
   tmdbPosterUrl,
@@ -26,6 +27,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Recommendations'>;
 type State =
   | { kind: 'loading' }
   | { kind: 'error'; message: string }
+  | { kind: 'auth_required'; message: string }
   | { kind: 'ready'; movie: TmdbMovieDetails; items: Recommendation[]; source: 'openai' | 'tmdb' | null };
 
 export function RecommendationsScreen({ route, navigation }: Props) {
@@ -49,13 +51,16 @@ export function RecommendationsScreen({ route, navigation }: Props) {
       try {
         setState({ kind: 'loading' });
 
-        if (status !== 'signed_in' || !accessToken) {
-          await login();
-          if (cancelled) return;
+        if (status !== 'signed_in') {
+          if (!cancelled) setState({ kind: 'auth_required', message: 'Debes iniciar sesión para ver recomendaciones.' });
+          return;
         }
 
         const token = accessToken || (await loadTokens()).accessToken;
-        if (!token) throw new Error('Not authenticated');
+        if (!token) {
+          if (!cancelled) setState({ kind: 'auth_required', message: 'Debes iniciar sesión para ver recomendaciones.' });
+          return;
+        }
 
         const [movie, recs] = await Promise.all([tmdbMovieDetails(movieId), recommendationsGet(token, movieId)]);
 
@@ -68,8 +73,14 @@ export function RecommendationsScreen({ route, navigation }: Props) {
             source: recs?.source ?? null,
           });
         }
-      } catch (e: any) {
-        if (!cancelled) setState({ kind: 'error', message: e?.message ?? 'Failed to load recommendations' });
+      } catch (e: unknown) {
+        if (cancelled) return;
+        if (e instanceof ApiError && e.status === 401) {
+          setState({ kind: 'auth_required', message: e.message });
+          return;
+        }
+        const message = e instanceof Error ? e.message : 'Failed to load recommendations';
+        setState({ kind: 'error', message });
       }
     }
 
@@ -85,6 +96,29 @@ export function RecommendationsScreen({ route, navigation }: Props) {
       <View style={styles.center}>
         <ActivityIndicator />
         <Text style={styles.muted}>Loading…</Text>
+      </View>
+    );
+  }
+
+  if (state.kind === 'auth_required') {
+    return (
+      <View style={styles.center}>
+        <Text style={styles.title}>Recomendaciones</Text>
+        <Text style={styles.muted}>{state.message}</Text>
+        <Pressable
+          style={styles.primaryButton}
+          onPress={async () => {
+            try {
+              await login();
+            } catch (e: unknown) {
+              const message = e instanceof Error ? e.message : 'Login failed';
+              setState({ kind: 'error', message });
+              return;
+            }
+          }}
+        >
+          <Text style={styles.primaryButtonText}>Iniciar sesión</Text>
+        </Pressable>
       </View>
     );
   }
@@ -196,6 +230,17 @@ const styles = StyleSheet.create({
   muted: {
     color: 'rgba(255,255,255,0.7)',
     textAlign: 'center',
+  },
+  primaryButton: {
+    marginTop: 10,
+    backgroundColor: '#7c3aed',
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+  },
+  primaryButtonText: {
+    color: 'white',
+    fontWeight: '700',
   },
   header: {
     flexDirection: 'row',

@@ -13,6 +13,7 @@ import { SideMenu } from './src/components/SideMenu';
 import { BrowseScreen } from './src/screens/BrowseScreen';
 import { FavoritesScreen } from './src/screens/FavoritesScreen';
 import { MovieDetailsScreen } from './src/screens/MovieDetailsScreen';
+import { RecommendationsScreen } from './src/screens/RecommendationsScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -59,6 +60,7 @@ export default function App() {
             />
             <Stack.Screen name="Favorites" component={FavoritesScreen} options={{ title: 'Favorites' }} />
             <Stack.Screen name="MovieDetails" component={MovieDetailsScreen} options={{ title: 'Movie' }} />
+            <Stack.Screen name="Recommendations" component={RecommendationsScreen} options={{ title: 'Recommendations' }} />
           </Stack.Navigator>
         </NavigationContainer>
       </AuthProvider>

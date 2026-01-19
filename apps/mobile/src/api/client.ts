@@ -49,6 +49,17 @@ export type RecommendationsResponse = {
   message?: string;
 };
 
+export class ApiError extends Error {
+  status: number;
+  code: string;
+
+  constructor(status: number, code: string, message: string) {
+    super(message);
+    this.status = status;
+    this.code = code;
+  }
+}
+
 const DEFAULT_API_BASE_URL = 'http://192.168.100.8:4000';
 
 export function getApiBaseUrl(): string {
@@ -69,8 +80,26 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   });
 
   if (!res.ok) {
+    const contentType = res.headers.get('content-type') ?? '';
     const text = await res.text().catch(() => '');
-    throw new Error(text || `Request failed: ${res.status}`);
+
+    let message = text || `Request failed: ${res.status}`;
+    if (contentType.includes('application/json') && text) {
+      try {
+        const json = JSON.parse(text) as unknown;
+        if (json && typeof json === 'object' && 'message' in json && typeof (json as any).message === 'string') {
+          message = (json as any).message;
+        }
+      } catch {
+        // ignore JSON parse errors
+      }
+    }
+
+    if (res.status === 401) {
+      throw new ApiError(401, 'AUTH_REQUIRED', 'Debes iniciar sesión para usar esta función.');
+    }
+
+    throw new ApiError(res.status, 'REQUEST_FAILED', message);
   }
 
   if (res.status === 204) {

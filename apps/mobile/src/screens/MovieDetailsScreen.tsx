@@ -13,6 +13,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import type { RootStackParamList } from '../navigation/types';
 import {
+  ApiError,
   favoritesAdd,
   favoritesList,
   favoritesRemove,
@@ -70,20 +71,26 @@ export function MovieDetailsScreen({ route, navigation }: Props) {
         if (status !== 'signed_in') {
           if (!cancelled) {
             setRecsLoading(false);
-            setRecsError('Login required to view recommendations.');
+            setRecsError('Debes iniciar sesión para ver recomendaciones.');
           }
           return;
         }
         const token = accessToken || (await loadTokens()).accessToken;
-        if (!token) throw new Error('Login required to view recommendations.');
+        if (!token) throw new Error('Debes iniciar sesión para ver recomendaciones.');
 
         const json = await recommendationsGet(token, movieId);
         const items = Array.isArray(json?.recommendations) ? json.recommendations.slice(0, 5) : [];
         if (cancelled) return;
         setRecs(items);
         setRecsSource(json?.source ?? null);
-      } catch (e: any) {
-        if (!cancelled) setRecsError(e?.message ?? 'Failed to load recommendations');
+      } catch (e: unknown) {
+        if (cancelled) return;
+        if (e instanceof ApiError && e.status === 401) {
+          setRecsError(e.message);
+          return;
+        }
+        const message = e instanceof Error ? e.message : 'Failed to load recommendations';
+        setRecsError(message);
       } finally {
         if (!cancelled) setRecsLoading(false);
       }
@@ -119,7 +126,20 @@ export function MovieDetailsScreen({ route, navigation }: Props) {
     setFavBusy(true);
     try {
       if (status !== 'signed_in' || !accessToken) {
-        await login();
+        Alert.alert('Favoritos', 'Debes iniciar sesión para agregar o eliminar favoritos.', [
+          { text: 'Cancelar', style: 'cancel' },
+          {
+            text: 'Iniciar sesión',
+            onPress: async () => {
+              try {
+                await login();
+              } catch (e: unknown) {
+                const message = e instanceof Error ? e.message : 'Login failed';
+                Alert.alert('Auth', message);
+              }
+            },
+          },
+        ]);
         return;
       }
 
@@ -135,8 +155,9 @@ export function MovieDetailsScreen({ route, navigation }: Props) {
         });
         setFavorite(created);
       }
-    } catch (e: any) {
-      Alert.alert('Favorites', e?.message ?? 'Failed to update favorites');
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : 'Failed to update favorites';
+      Alert.alert('Favoritos', message);
     } finally {
       setFavBusy(false);
     }
